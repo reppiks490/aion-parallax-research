@@ -1,6 +1,9 @@
 # PARALLAX — AION's multi-view market atlas
 
-Status: **proposal for owner review**, 2026-09-23. No PARALLAX feature code has been built. This extends the existing AION/Icarus work; it does not create another execution system or replace the current models.
+Status: **proposed market-state atlas**, 2026-09-23. A research-only archive
+inventory is implemented as the first provenance step (ADR-0003). No
+fingerprint, analog retrieval, predictive model, or execution path has been
+built. This extends AION/Icarus; it does not replace the current models.
 
 ## The idea
 

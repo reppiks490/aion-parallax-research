@@ -1,10 +1,49 @@
 # Current state — 2026-09-23
 
+## CA continuation checkpoint
+
+The source-only handoff ZIP in `Icarus` commit `20c1f15` was verified at
+SHA-256 `32ca851227bbce99d58df1e39fb69ac08f9fc2f42ba5a05239018f624dc1ce40`,
+extracted without path traversal, and imported into the private native repo
+`reppiks490/aion-parallax-research` at import commit `ca9f575`. The original
+Work task's Git history was not present in the ZIP, so this is a new import
+history, not a claim to have recovered earlier commits. Its 11 baseline tests
+passed locally. `aion/parallax_manifest.py` adds a research-only ZIP-native
+inventory (ADR-0003); it has no data-feed, sibling or order adapter. Source
+identity and availability remain unverified. An independent review is pending.
+
+The first PARALLAX archive inventory now reconciles the physical corpus:
+659 ZIP CSV members and 803 extracted files have the same 542 byte-distinct
+contents. See `docs/CORPUS_RECONCILIATION_20260923.md` for exact counts,
+method, and remaining identity/clock blockers. Unit tests now pass 13/13.
+
+The baseline demo's historical 21-event/head-hash claim below predates the
+15-second depth freshness gate. The continuation adds one explicitly synthetic
+book update so the demo has 22 events and does not portray a stale book as
+current. Do not reuse the old head hash as the current demo receipt.
+
+AION prediction contract v2 now records local issuance time and event/gap
+ledger cutoffs. A frozen frame can be reconstructed after a late historical
+import; retrospective replay and unverified outcomes are explicitly ineligible
+for performance claims. This does not authenticate a provider clock or an
+outcome source. The independent review remains open on those boundaries.
+
+Verification after the CA repairs: Python 3.11 `unittest discover -s tests -q`
+passes 21/21; a fresh synthetic demo verifies 22 events with head
+`c0489a8d48f48ca1288c54339b3060bb9d57bf021cf238c77518004ca7eeb1ff`;
+all four JSON schemas parse and cockpit JavaScript parses under Node. The
+independent review findings and unresolved gates are in
+`docs/CA_REVIEW_20260923.md`.
+
 ## Goal
 
 Build AION as the shared decision-time market memory and an explorable time-machine cockpit for the Icarus stack. The owner explicitly requested the more compelling, interactive version and authorized implementation.
 
 ## New owner request — proposed next layer
+
+The remainder of this document was imported from the original source ZIP.
+Its old publication status and 11-test count are historical; the CA
+continuation checkpoint above is the current state.
 
 The owner requested one exceptionally interesting hybrid build using primarily the expected ~800 CSVs and asked for GitHub access so every agent can share the work. `docs/PARALLAX-PROPOSAL.md` is the proposed AION extension, **not an implementation**. On 2026-09-23, GitHub browser access as `reppiks490` revealed a second public archive: `csv-data-multi-chart-type` at `a482e7d1801fa7fa5aec093960097c0051c0403c` has 33 usable CSV members in one ZIP, 29 byte-distinct from the earlier nine ZIPs. Together with `multi-level-csv` at `ce82124352762c14eb33836a5c894bc3a2a71dfe`, the accessible checkpoint has **659 usable archive entries across ten ZIPs, 542 byte-distinct contents and roughly 13,787,630 data rows**. Reconcile the expected ~800 before claiming complete coverage. Browser sign-in was confirmed; remote write has not yet been verified.
 

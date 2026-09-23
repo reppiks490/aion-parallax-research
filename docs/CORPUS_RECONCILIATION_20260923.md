@@ -1,0 +1,38 @@
+# PARALLAX corpus reconciliation (CA, 2026-09-23)
+
+This is a physical inventory, not a proof of independent signals, source
+identity, decision-time availability, market-data rights, or profitability.
+
+`aion.parallax_manifest` scanned the nine ZIPs in the local
+`multi-level-csv` checkout at `Icarus-ml-d9d4db8/history/unzipped/_repo`
+and the separate `Downloads/Csv indexes.zip`. It found:
+
+| Measure | Result |
+| --- | ---: |
+| Archive members that are CSV data (excluding sidecars) | 659 |
+| Parsed CSV members | 659 |
+| Distinct byte-exact SHA-256 contents | 542 |
+| Members belonging to an exact-byte duplicate group | 230 |
+| Members with repeated raw header names | 183 |
+| Logical data records parsed by `csv.reader` | 13,788,256 |
+
+The earlier handoff's approximately 13,787,630 rows differs by 626. The
+physical member and hash counts agree exactly; the row-count discrepancy is
+still uninvestigated and must not be described as a verified equality. The
+33-file index archive contributes 1,199,340 logical rows, matching its
+earlier estimate exactly.
+
+The DAEDALUS six-root extracted catalog has 803 physical files and 542
+distinct SHA-256 contents. Comparing complete SHA sets gives **zero ZIP-only
+and zero extracted-only hashes**. All 144 files in the extra `Downloads/Csv`
+root have byte content present in the other extracted roots. They are still
+separate physical records; no source was deleted or silently collapsed.
+
+The complete archive/member-level manifest is generated locally at
+`artifacts/parallax-ten-archives.json` and intentionally ignored by Git.
+It contains absolute owner paths. The inventory preserves archive/member
+ordinal, original header positions, parse status and member hash. It does
+not establish contract, chart transform, event/availability clock, provider,
+or execution-safe status. Stock candidate CSVs remain context, not NQ
+futures execution tape. PARALLAX analogs and AION real-data replay remain
+disabled until these identities are reviewed.
