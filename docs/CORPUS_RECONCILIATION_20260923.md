@@ -83,3 +83,20 @@ Downstream fusion therefore uses:
 Unresolved chart family or sampling construction remains fail-closed for
 representation-sensitive fusion. Exact duplicates preserve lineage but add no
 evidence weight.
+
+
+### Price geometry is a separate axis
+
+Inventory v4 also separates **price geometry** from chart/view family and
+sampling construction. A stream may have standard OHLC geometry while carrying
+a TPO/footprint/profile view, or Heikin-Ashi geometry while still requiring
+separate evidence about the surrounding chart/view configuration.
+
+Accordingly, deterministic OHLC comparisons may prove
+`standard_ohlc` or `heikin_ashi` geometry, but they do not by themselves
+prove a complete view-family identity. The identity axes are now:
+
+`instrument -> view family -> price geometry -> sampling construction/native setting -> session/clock provenance`.
+
+This keeps mathematical transform evidence useful without letting it silently
+stand in for export-specific chart/session provenance.
