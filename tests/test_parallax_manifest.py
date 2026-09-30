@@ -39,5 +39,24 @@ class ManifestTests(unittest.TestCase):
             self.assertEqual(result["members"][0]["status"], "parse_error")
 
 
+    def test_preserves_tick_range_and_chart_family_claims(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "multi.zip"
+            content = "time,open,high,low,close,MP POC,MP VAH,MP VAL\n1,1,2,0,1,1,2,0\n"
+            with ZipFile(path, "w") as archive:
+                archive.writestr("Renko/CME_NQ1!, 10R.csv", content)
+                archive.writestr("Tick/CME_NQ1!, 1000T.csv", content)
+                archive.writestr("Heikin Ashi/CME_NQ1!, 20.csv", content)
+            result = scan_archives([path])
+            claims = {row["member_name"]: row["representation_claim"] for row in result["members"]}
+            self.assertEqual(claims["Renko/CME_NQ1!, 10R.csv"]["family"], "renko")
+            self.assertEqual(claims["Renko/CME_NQ1!, 10R.csv"]["sampling_domain"], "event_or_profile")
+            self.assertEqual(claims["Tick/CME_NQ1!, 1000T.csv"]["family"], "tick_bars")
+            self.assertEqual(claims["Tick/CME_NQ1!, 1000T.csv"]["construction"], "tick")
+            self.assertEqual(claims["Heikin Ashi/CME_NQ1!, 20.csv"]["family"], "heikin_ashi")
+            self.assertIn("market_profile_fields", claims["Heikin Ashi/CME_NQ1!, 20.csv"]["schema_tags"])
+            self.assertTrue(all(not x["authoritative"] for x in claims.values()))
+
+
 if __name__ == "__main__":
     unittest.main()
