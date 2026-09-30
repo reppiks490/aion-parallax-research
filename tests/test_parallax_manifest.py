@@ -73,5 +73,20 @@ class ManifestTests(unittest.TestCase):
             self.assertFalse(claim["authoritative"])
 
 
+    def test_candidate_archive_uses_documented_regular_candle_family(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "Csv first 60.zip"
+            content = "time,open,high,low,close,MP POC,MP VAH,MP VAL\n1,1,2,0,1,1,2,0\n"
+            with ZipFile(path, "w") as archive:
+                archive.writestr("Csv first 60/BATS_AAPL, 1.csv", content)
+            result = scan_archives([path])
+            claim = result["members"][0]["representation_claim"]
+            self.assertEqual(claim["family"], "regular_candles")
+            self.assertEqual(claim["sampling_domain"], "time")
+            self.assertEqual(claim["construction"], "time_bar")
+            self.assertIn("market_profile_fields", claim["schema_tags"])
+            self.assertFalse(claim["authoritative"])
+
+
 if __name__ == "__main__":
     unittest.main()
