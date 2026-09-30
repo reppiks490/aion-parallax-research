@@ -29,8 +29,8 @@ def _is_sidecar(name: str) -> bool:
 
 
 
-def _representation_claim(member_name: str, headers: list[str], archive_name: str = "") -> dict:
-    """Return non-authoritative orthogonal chart-family and sampling claims."""
+def _representation_claim(member_name: str, headers: list[str], archive_name: str | None = None) -> dict:
+    """Return non-authoritative, orthogonal chart-family and sampling claims."""
     norm = re.sub(r"[^a-z0-9]+", " ", member_name.lower()).strip()
     family = "unknown"
     reasons: list[str] = []
@@ -60,7 +60,7 @@ def _representation_claim(member_name: str, headers: list[str], archive_name: st
         "csv last 57.zip",
         "last 57 half.zip",
     }
-    if family == "unknown" and archive_name.lower() in documented_regular_archives:
+    if family == "unknown" and str(archive_name or "").lower() in documented_regular_archives:
         family = "regular_candles"
         confidence = 0.95
         reasons.append("documented_stock_candle_tide_archive")
@@ -88,10 +88,7 @@ def _representation_claim(member_name: str, headers: list[str], archive_name: st
     tags: list[str] = []
     if {"mp poc", "mp vah", "mp val"} & hs or {"poc", "vah", "val"}.issubset(hs):
         tags.append("market_profile_fields")
-    if any(
-        ("delta" in h) or ("bid" in h and "ask" in h) or h in {"bid volume", "ask volume"}
-        for h in hs
-    ):
+    if any(("delta" in h) or ("bid" in h and "ask" in h) for h in hs):
         tags.append("footprint_fields")
     if any("volume profile" in h for h in hs):
         tags.append("volume_profile_fields")
