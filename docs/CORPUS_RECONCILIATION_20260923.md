@@ -56,9 +56,9 @@ chart construction or feed semantics. Exact-byte duplicates preserve lineage
 but receive no extra evidence weight.
 
 Downstream rule: causally align native representation clocks; fuse streams
-inside sampling construction; fuse constructions inside reviewed chart family;
-fuse chart families to a symbol-level state; only then perform cross-asset
-weighting. Tick/range/Renko/profile streams must never be coerced to fictional
+inside sampling construction; fuse constructions inside price geometry; fuse
+price geometries inside reviewed chart/view family; fuse chart/view families to
+a symbol-level state; only then perform cross-asset weighting. Tick/range/Renko/profile streams must never be coerced to fictional
 fixed-minute cadence.
 
 
@@ -79,7 +79,7 @@ archives are recorded as regular-candle views with TIDE/market-profile fields
 as schema overlays, not as separate profile chart families.
 
 Downstream fusion therefore uses:
-`stream -> sampling construction within chart family -> chart family -> symbol -> cross-asset`.
+`stream -> sampling construction -> price geometry -> chart/view family -> symbol -> cross-asset`.
 Unresolved chart family or sampling construction remains fail-closed for
 representation-sensitive fusion. Exact duplicates preserve lineage but add no
 evidence weight.
