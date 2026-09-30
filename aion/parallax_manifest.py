@@ -33,6 +33,7 @@ def _representation_claim(member_name: str, headers: list[str], archive_name: st
     """Return non-authoritative, orthogonal chart-family and sampling claims."""
     norm = re.sub(r"[^a-z0-9]+", " ", member_name.lower()).strip()
     family = "unknown"
+    price_geometry = "unknown"
     reasons: list[str] = []
     confidence = 0.0
 
@@ -50,6 +51,12 @@ def _representation_claim(member_name: str, headers: list[str], archive_name: st
             family = value
             confidence = 0.98
             reasons.append(f"explicit_{value}_label")
+            if value == "regular_candles":
+                price_geometry = "standard_ohlc"
+            elif value == "heikin_ashi":
+                price_geometry = "heikin_ashi"
+            elif value == "renko":
+                price_geometry = "renko"
             break
 
     documented_regular_archives = {
@@ -62,6 +69,7 @@ def _representation_claim(member_name: str, headers: list[str], archive_name: st
     }
     if family == "unknown" and str(archive_name or "").lower() in documented_regular_archives:
         family = "regular_candles"
+        price_geometry = "standard_ohlc"
         confidence = 0.95
         reasons.append("documented_stock_candle_tide_archive")
 
@@ -97,6 +105,7 @@ def _representation_claim(member_name: str, headers: list[str], archive_name: st
 
     return {
         "family": family,
+        "price_geometry": price_geometry,
         "sampling_domain": sampling_domain,
         "construction": construction,
         "setting": setting,
@@ -126,6 +135,7 @@ def _profile_member(archive: ZipFile, info: ZipInfo, ordinal: int, archive_hash:
         "execution_authorized": False,
         "representation_claim": {
             "family": "unknown",
+            "price_geometry": "unknown",
             "sampling_domain": "unknown",
             "construction": "unknown",
             "setting": None,
@@ -185,7 +195,7 @@ def scan_archives(paths: list[Path]) -> dict:
             })
     hashes = Counter(row["member_sha256"] for row in members if row["member_sha256"])
     return {
-        "schema": "aion-parallax-inventory-v3",
+        "schema": "aion-parallax-inventory-v4",
         "research_only": True,
         "source_identity_verified": False,
         "availability_verified": False,
