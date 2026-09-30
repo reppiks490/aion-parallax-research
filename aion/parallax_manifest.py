@@ -6,6 +6,7 @@ import argparse
 import hashlib
 import io
 import json
+import re
 import stat
 from collections import Counter
 from pathlib import Path
@@ -27,6 +28,84 @@ def _is_sidecar(name: str) -> bool:
     return "__MACOSX" in parts or parts[-1].startswith("._")
 
 
+
+def _representation_claim(member_name: str, headers: list[str]) -> dict:
+    """Return a non-authoritative representation/sampling claim from explicit clues."""
+    norm = re.sub(r"[^a-z0-9]+", " ", member_name.lower()).strip()
+    family = "unknown"
+    reasons: list[str] = []
+    confidence = 0.0
+
+    explicit = (
+        (r"\bheikin\s+ashi\b", "heikin_ashi"),
+        (r"\brenko\b", "renko"),
+        (r"\btime\s+price\s+opportunity\b|\btpo\b", "tpo"),
+        (r"\bvolume\s+footprint\b|\bfootprint\b", "volume_footprint"),
+        (r"\bsession\s+volume\s+profile\b|\bsvp\b", "session_volume_profile"),
+        (r"\bvolume\s+profile\b", "volume_profile"),
+        (r"\bcandlestick\b|\bcandles\b|\bregular\s+candles\b", "regular_candles"),
+    )
+    for pattern, value in explicit:
+        if re.search(pattern, norm):
+            family = value
+            confidence = 0.98
+            reasons.append(f"explicit_{value}_label")
+            break
+
+    base = member_name.replace("\\", "/").rsplit("/", 1)[-1]
+    stem = base[:-4] if base.lower().endswith(".csv") else base
+    claim = stem.rsplit(",", 1)[1].strip() if "," in stem else ""
+    m = re.fullmatch(r"(\d+)([SDWMTR]?)(?:\s+\d+)?", claim, re.I)
+    sampling_domain = "unknown"
+    construction = "unknown"
+    setting = claim.upper() or None
+    if m:
+        unit = (m.group(2) or "MIN").upper()
+        if unit == "T":
+            sampling_domain, construction = "event", "tick"
+            if family == "unknown":
+                family, confidence = "tick_bars", 0.95
+            reasons.append("explicit_tick_suffix")
+        elif unit == "R":
+            sampling_domain, construction = "event", "range"
+            if family == "unknown":
+                family, confidence = "range_bars", 0.95
+            reasons.append("explicit_range_suffix")
+        else:
+            sampling_domain, construction = "time", "time_bar"
+            if family == "unknown":
+                family, confidence = "time_bars_unspecified", 0.55
+            reasons.append("time_interval_claim_without_chart_type")
+
+    if family in {"renko", "tpo", "volume_footprint", "session_volume_profile", "volume_profile"}:
+        sampling_domain = "event_or_profile"
+        if construction == "unknown":
+            construction = family
+    elif family == "heikin_ashi" and sampling_domain == "time":
+        construction = "derived_time_bar"
+
+    hs = {str(x).strip().lower() for x in headers}
+    tags: list[str] = []
+    if {"mp poc", "mp vah", "mp val"} & hs or {"poc", "vah", "val"}.issubset(hs):
+        tags.append("market_profile_fields")
+    if any(("delta" in h) or ("bid" in h and "ask" in h) for h in hs):
+        tags.append("footprint_fields")
+    if tags:
+        reasons.append("profile_or_orderflow_fields_present")
+        confidence = max(confidence, 0.65)
+
+    return {
+        "family": family,
+        "sampling_domain": sampling_domain,
+        "construction": construction,
+        "setting": setting,
+        "schema_tags": sorted(set(tags)),
+        "confidence": confidence,
+        "reasons": reasons or ["insufficient_explicit_representation_evidence"],
+        "authoritative": False,
+    }
+
+
 def _profile_member(archive: ZipFile, info: ZipInfo, ordinal: int, archive_hash: str) -> dict:
     identity = hashlib.sha256(
         json.dumps([archive_hash, ordinal, info.filename], ensure_ascii=False).encode("utf-8")
@@ -44,6 +123,16 @@ def _profile_member(archive: ZipFile, info: ZipInfo, ordinal: int, archive_hash:
         "source_identity_verified": False,
         "availability_verified": False,
         "execution_authorized": False,
+        "representation_claim": {
+            "family": "unknown",
+            "sampling_domain": "unknown",
+            "construction": "unknown",
+            "setting": None,
+            "schema_tags": [],
+            "confidence": 0.0,
+            "reasons": ["unparsed"],
+            "authoritative": False,
+        },
     }
     if info.file_size > MAX_MEMBER_BYTES:
         record["status"] = "oversize"
@@ -61,6 +150,7 @@ def _profile_member(archive: ZipFile, info: ZipInfo, ordinal: int, archive_hash:
             counts = Counter(header)
             record["duplicate_header_names"] = sorted(name for name, count in counts.items() if count > 1)
             record["data_rows"] = sum(1 for _ in reader)
+            record["representation_claim"] = _representation_claim(info.filename, header)
             record["status"] = "parsed"
     except (UnicodeError, csv.Error, EOFError, OSError, StopIteration, RuntimeError, ValueError) as exc:
         record["status"] = "parse_error"
@@ -94,7 +184,7 @@ def scan_archives(paths: list[Path]) -> dict:
             })
     hashes = Counter(row["member_sha256"] for row in members if row["member_sha256"])
     return {
-        "schema": "aion-parallax-inventory-v1",
+        "schema": "aion-parallax-inventory-v2",
         "research_only": True,
         "source_identity_verified": False,
         "availability_verified": False,
