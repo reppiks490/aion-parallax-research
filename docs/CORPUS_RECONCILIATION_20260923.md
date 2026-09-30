@@ -61,3 +61,25 @@ fuse chart families to a symbol-level state; only then perform cross-asset
 weighting. Tick/range/Renko/profile streams must never be coerced to fictional
 fixed-minute cadence.
 
+
+
+## Inventory schema v3 — orthogonal representation identity
+
+PARALLAX now records chart/view family separately from sampling construction.
+
+- **Chart family:** regular candles, Heikin Ashi, Renko, TPO, volume
+  footprint/profile, session volume profile, or unresolved.
+- **Sampling domain/construction:** time/time-bar, event/tick, event/range, or
+  unresolved.
+
+A `1000T` or `10R` suffix proves only a tick/range sampling claim. It does
+not by itself identify the chart family. Conversely, a Renko/HA/profile family
+label does not authorize a fixed clock. The six documented equity-candidate
+archives are recorded as regular-candle views with TIDE/market-profile fields
+as schema overlays, not as separate profile chart families.
+
+Downstream fusion therefore uses:
+`stream -> sampling construction within chart family -> chart family -> symbol -> cross-asset`.
+Unresolved chart family or sampling construction remains fail-closed for
+representation-sensitive fusion. Exact duplicates preserve lineage but add no
+evidence weight.
