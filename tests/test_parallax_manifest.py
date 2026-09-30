@@ -50,12 +50,27 @@ class ManifestTests(unittest.TestCase):
             result = scan_archives([path])
             claims = {row["member_name"]: row["representation_claim"] for row in result["members"]}
             self.assertEqual(claims["Renko/CME_NQ1!, 10R.csv"]["family"], "renko")
-            self.assertEqual(claims["Renko/CME_NQ1!, 10R.csv"]["sampling_domain"], "event_or_profile")
-            self.assertEqual(claims["Tick/CME_NQ1!, 1000T.csv"]["family"], "tick_bars")
+            self.assertEqual(claims["Renko/CME_NQ1!, 10R.csv"]["sampling_domain"], "event")
+            self.assertEqual(claims["Renko/CME_NQ1!, 10R.csv"]["construction"], "range")
+            self.assertEqual(claims["Tick/CME_NQ1!, 1000T.csv"]["family"], "unknown")
             self.assertEqual(claims["Tick/CME_NQ1!, 1000T.csv"]["construction"], "tick")
             self.assertEqual(claims["Heikin Ashi/CME_NQ1!, 20.csv"]["family"], "heikin_ashi")
             self.assertIn("market_profile_fields", claims["Heikin Ashi/CME_NQ1!, 20.csv"]["schema_tags"])
             self.assertTrue(all(not x["authoritative"] for x in claims.values()))
+
+
+    def test_documented_candidate_archive_is_regular_candle_family(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "Csv first 60.zip"
+            content = "time,open,high,low,close,MP POC,MP VAH,MP VAL\n1,1,2,0,1,1,2,0\n"
+            with ZipFile(path, "w") as archive:
+                archive.writestr("Csv first 60/BATS_AAPL, 1.csv", content)
+            result = scan_archives([path])
+            claim = result["members"][0]["representation_claim"]
+            self.assertEqual(claim["family"], "regular_candles")
+            self.assertEqual(claim["construction"], "time_bar")
+            self.assertIn("market_profile_fields", claim["schema_tags"])
+            self.assertFalse(claim["authoritative"])
 
 
 if __name__ == "__main__":
