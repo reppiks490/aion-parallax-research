@@ -36,3 +36,23 @@ not establish contract, chart transform, event/availability clock, provider,
 or execution-safe status. Stock candidate CSVs remain context, not NQ
 futures execution tape. PARALLAX analogs and AION real-data replay remain
 disabled until these identities are reviewed.
+
+
+## Representation-aware interpretation
+
+The corpus is intentionally multi-view. Physical members must not be interpreted
+as independent market votes merely because they are separate CSVs. Time-based
+seconds/minutes/hours, tick bars, range bars, Renko, Heikin Ashi, TPO/profile and
+footprint/session-profile exports are distinct representations of overlapping
+market state.
+
+Inventory v2 records a non-authoritative `representation_claim` for explicit
+member/path labels and time/tick/range suffixes. Profile/order-flow-like headers
+are schema tags only; they do not silently prove chart construction or feed
+semantics. Exact-byte duplicates preserve lineage but receive no extra evidence
+weight.
+
+Downstream rule: causally align native representation clocks, fuse correlated
+views to a symbol-level state, retain disagreement/coverage as features, and only
+then perform cross-asset weighting. Tick/range/Renko/profile streams must never be
+coerced to fictional fixed-minute cadence.
