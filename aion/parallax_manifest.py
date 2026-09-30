@@ -29,8 +29,8 @@ def _is_sidecar(name: str) -> bool:
 
 
 
-def _representation_claim(member_name: str, headers: list[str]) -> dict:
-    """Return a non-authoritative representation/sampling claim from explicit clues."""
+def _representation_claim(member_name: str, headers: list[str], archive_name: str = "") -> dict:
+    """Return non-authoritative orthogonal chart-family and sampling claims."""
     norm = re.sub(r"[^a-z0-9]+", " ", member_name.lower()).strip()
     family = "unknown"
     reasons: list[str] = []
@@ -52,6 +52,19 @@ def _representation_claim(member_name: str, headers: list[str]) -> dict:
             reasons.append(f"explicit_{value}_label")
             break
 
+    documented_regular_archives = {
+        "csv first 60.zip",
+        "first 60 half.zip",
+        "csv 2nd 60.zip",
+        "2nd 60 half.zip",
+        "csv last 57.zip",
+        "last 57 half.zip",
+    }
+    if family == "unknown" and archive_name.lower() in documented_regular_archives:
+        family = "regular_candles"
+        confidence = 0.95
+        reasons.append("documented_stock_candle_tide_archive")
+
     base = member_name.replace("\\", "/").rsplit("/", 1)[-1]
     stem = base[:-4] if base.lower().endswith(".csv") else base
     claim = stem.rsplit(",", 1)[1].strip() if "," in stem else ""
@@ -63,36 +76,27 @@ def _representation_claim(member_name: str, headers: list[str]) -> dict:
         unit = (m.group(2) or "MIN").upper()
         if unit == "T":
             sampling_domain, construction = "event", "tick"
-            if family == "unknown":
-                family, confidence = "tick_bars", 0.95
             reasons.append("explicit_tick_suffix")
         elif unit == "R":
             sampling_domain, construction = "event", "range"
-            if family == "unknown":
-                family, confidence = "range_bars", 0.95
             reasons.append("explicit_range_suffix")
         else:
             sampling_domain, construction = "time", "time_bar"
-            if family == "unknown":
-                family, confidence = "time_bars_unspecified", 0.55
-            reasons.append("time_interval_claim_without_chart_type")
-
-    if family in {"renko", "tpo", "volume_footprint", "session_volume_profile", "volume_profile"}:
-        sampling_domain = "event_or_profile"
-        if construction == "unknown":
-            construction = family
-    elif family == "heikin_ashi" and sampling_domain == "time":
-        construction = "derived_time_bar"
+            reasons.append("explicit_time_sampling_claim")
 
     hs = {str(x).strip().lower() for x in headers}
     tags: list[str] = []
     if {"mp poc", "mp vah", "mp val"} & hs or {"poc", "vah", "val"}.issubset(hs):
         tags.append("market_profile_fields")
-    if any(("delta" in h) or ("bid" in h and "ask" in h) for h in hs):
+    if any(
+        ("delta" in h) or ("bid" in h and "ask" in h) or h in {"bid volume", "ask volume"}
+        for h in hs
+    ):
         tags.append("footprint_fields")
+    if any("volume profile" in h for h in hs):
+        tags.append("volume_profile_fields")
     if tags:
         reasons.append("profile_or_orderflow_fields_present")
-        confidence = max(confidence, 0.65)
 
     return {
         "family": family,
@@ -106,7 +110,7 @@ def _representation_claim(member_name: str, headers: list[str]) -> dict:
     }
 
 
-def _profile_member(archive: ZipFile, info: ZipInfo, ordinal: int, archive_hash: str) -> dict:
+def _profile_member(archive: ZipFile, info: ZipInfo, ordinal: int, archive_hash: str, archive_name: str = "") -> dict:
     identity = hashlib.sha256(
         json.dumps([archive_hash, ordinal, info.filename], ensure_ascii=False).encode("utf-8")
     ).hexdigest()
@@ -150,7 +154,7 @@ def _profile_member(archive: ZipFile, info: ZipInfo, ordinal: int, archive_hash:
             counts = Counter(header)
             record["duplicate_header_names"] = sorted(name for name, count in counts.items() if count > 1)
             record["data_rows"] = sum(1 for _ in reader)
-            record["representation_claim"] = _representation_claim(info.filename, header)
+            record["representation_claim"] = _representation_claim(info.filename, header, archive_name)
             record["status"] = "parsed"
     except (UnicodeError, csv.Error, EOFError, OSError, StopIteration, RuntimeError, ValueError) as exc:
         record["status"] = "parse_error"
@@ -175,7 +179,7 @@ def scan_archives(paths: list[Path]) -> dict:
                 members.append({
                     "archive_path": str(path),
                     "archive_sha256": archive_hash,
-                    **_profile_member(archive, info, ordinal, archive_hash),
+                    **_profile_member(archive, info, ordinal, archive_hash, path.name),
                 })
             archives.append({
                 "path": str(path), "sha256": archive_hash,
@@ -184,7 +188,7 @@ def scan_archives(paths: list[Path]) -> dict:
             })
     hashes = Counter(row["member_sha256"] for row in members if row["member_sha256"])
     return {
-        "schema": "aion-parallax-inventory-v2",
+        "schema": "aion-parallax-inventory-v3",
         "research_only": True,
         "source_identity_verified": False,
         "availability_verified": False,
