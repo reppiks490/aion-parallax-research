@@ -1,5 +1,35 @@
 # Current state — 2026-09-23
 
+## 2026-10-05 workflow assurance evolution
+
+GitHub Actions assurance is expanded on branch `chatgpt/workflow-evolution-20261005` without changing
+AION's research-only authority or any evidence/scientific contract.
+
+Changed file:
+- `.github/workflows/parallax-tests.yml`
+
+Automated gates now cover:
+- Python 3.11/3.12/3.13 compilation and the complete unittest suite;
+- JSON contract parsing;
+- inline cockpit JavaScript syntax under Node 22;
+- an isolated synthetic demo/replay/verify smoke path;
+- daily scheduled drift detection plus push, pull-request and manual execution;
+- least-privilege read permissions, concurrency cancellation, bounded timeouts,
+  and failure-only synthetic diagnostics.
+
+Expected verification commands represented by CI:
+- `python -m compileall -q aion tests`
+- `python -m unittest discover -s tests -v`
+- JSON parsing for every `contracts/*.json`
+- `node --check` for each inline cockpit script
+- `python -m aion.cli --db .ci-aion/replay.sqlite3 demo`
+- `python -m aion.cli --db .ci-aion/replay.sqlite3 verify`
+
+Unresolved boundary: this workflow deliberately does not authenticate market
+data, spend protected holdouts, connect a broker, or convert synthetic replay
+into performance evidence. Those remain explicit integration/review gates.
+
+
 ## CA continuation checkpoint
 
 The source-only handoff ZIP in `Icarus` commit `20c1f15` was verified at

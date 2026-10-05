@@ -1,26 +1,111 @@
-name: PARALLAX tests
+name: AION / PARALLAX assurance
 
 on:
   push:
     branches: [main]
     paths:
       - "aion/**"
+      - "contracts/**"
       - "tests/**"
       - "pyproject.toml"
       - ".github/workflows/parallax-tests.yml"
   pull_request:
     paths:
       - "aion/**"
+      - "contracts/**"
       - "tests/**"
       - "pyproject.toml"
       - ".github/workflows/parallax-tests.yml"
+  schedule:
+    - cron: "17 7 * * *"
   workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: aion-assurance-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  PYTHONDONTWRITEBYTECODE: "1"
+  PYTHONUNBUFFERED: "1"
+
 jobs:
-  test:
+  unit:
+    name: Unit / Python ${{ matrix.python }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install package
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+      - name: Compile all Python
+        run: python -m compileall -q aion tests
+      - name: Run complete unit suite
+        run: python -m unittest discover -s tests -v
+
+  contracts-and-cockpit:
+    name: Contracts + cockpit syntax
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate JSON contracts
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          files = sorted(Path("contracts").glob("*.json"))
+          if not files:
+              raise SystemExit("no JSON contracts found")
+          for path in files:
+              with path.open("r", encoding="utf-8") as handle:
+                  json.load(handle)
+              print(f"validated {path}")
+          PY
+      - name: Validate cockpit JavaScript syntax
+        run: |
+          python - <<'PY'
+          import re
+          from pathlib import Path
+
+          html = Path("aion/cockpit.html").read_text(encoding="utf-8")
+          scripts = [
+              body for body in re.findall(r"<script(?:\s[^>]*)?>(.*?)</script>", html, re.I | re.S)
+              if body.strip()
+          ]
+          if not scripts:
+              raise SystemExit("no inline cockpit JavaScript found")
+          for index, body in enumerate(scripts):
+              path = Path(f"/tmp/aion-cockpit-{index}.js")
+              path.write_text(body, encoding="utf-8")
+              print(path)
+          PY
+          for script in /tmp/aion-cockpit-*.js; do
+            node --check "$script"
+          done
+
+  synthetic-replay:
+    name: Synthetic replay + evidence firewall
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -30,9 +115,40 @@ jobs:
           python-version: "3.12"
           cache: pip
           cache-dependency-path: pyproject.toml
-      - name: Install
+      - name: Install package
         run: |
           python -m pip install --upgrade pip
           python -m pip install -e .
-      - name: Run PARALLAX tests
-        run: python -m unittest discover -s tests -v
+      - name: Build and verify isolated synthetic replay
+        run: |
+          rm -rf .ci-aion
+          mkdir -p .ci-aion
+          python -m aion.cli --db .ci-aion/replay.sqlite3 demo | tee .ci-aion/demo.log
+          python -m aion.cli --db .ci-aion/replay.sqlite3 verify | tee .ci-aion/verify.log
+          python -m aion.cli --db .ci-aion/replay.sqlite3 timeline > .ci-aion/timeline.log
+          python -m aion.cli --db .ci-aion/replay.sqlite3 predictions > .ci-aion/predictions.log
+      - name: Preserve diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aion-synthetic-diagnostics
+          path: .ci-aion/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  assurance:
+    name: Assurance gate
+    if: always()
+    needs: [unit, contracts-and-cockpit, synthetic-replay]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require all gates
+        env:
+          UNIT: ${{ needs.unit.result }}
+          CONTRACTS: ${{ needs.contracts-and-cockpit.result }}
+          REPLAY: ${{ needs.synthetic-replay.result }}
+        run: |
+          printf 'unit=%s\ncontracts=%s\nreplay=%s\n' "$UNIT" "$CONTRACTS" "$REPLAY"
+          test "$UNIT" = success
+          test "$CONTRACTS" = success
+          test "$REPLAY" = success
