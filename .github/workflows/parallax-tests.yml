@@ -135,7 +135,7 @@ jobs:
           python -m aion.cli --db .ci-aion/replay.sqlite3 predictions > .ci-aion/predictions.log
       - name: Preserve diagnostics on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: aion-synthetic-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}
           path: .ci-aion/
@@ -165,7 +165,7 @@ jobs:
           python -m pip check
           aion --help
       - name: Preserve package evidence
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: aion-package-${{ github.run_id }}-${{ github.run_attempt }}
           path: dist/
@@ -266,7 +266,7 @@ jobs:
           PY
       - name: Upload assurance evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: aion-assurance-${{ github.run_id }}-${{ github.run_attempt }}
           path: assurance/assurance-summary.json
@@ -322,7 +322,7 @@ jobs:
           PY
       - name: Upload scheduled assurance evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: aion-scheduled-assurance-${{ github.run_id }}-${{ github.run_attempt }}
           path: assurance/assurance-summary.json
