@@ -33,3 +33,12 @@ granting execution authority.
 
 AION evidence declares `authority=read_only_research` and
 `execution_allowed=false`.
+
+## Dependency maintenance automation
+
+Dependabot checks GitHub Actions and Python packaging metadata every Monday in
+`America/Chicago`. Minor and patch updates are grouped to reduce pull-request
+noise; major updates remain isolated for explicit review. Dependency changes that
+touch `pyproject.toml` or workflow files are still subject to the repository's
+normal assurance gates before merge.
+
