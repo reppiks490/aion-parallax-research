@@ -83,3 +83,8 @@ The JSON retains each physical archive/member and repeated header position;
 all source-identity, availability, and execution flags remain false. Keep the
 local manifest out of Git because it contains filesystem paths and source
 details. See [ADR-0003](docs/DECISIONS/ADR-0003.md).
+
+## License and ownership
+
+Copyright (c) 2026 reppiks490. **Proprietary — all rights reserved.**
+Public visibility does not grant permission to reuse, redistribute, sell, or claim this work as your own. Written permission is required except where applicable law, existing grants, third-party terms, or GitHub's terms provide otherwise. See [LICENSE.md](LICENSE.md) for the full notice and permission requests.
