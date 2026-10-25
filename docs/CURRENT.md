@@ -111,3 +111,8 @@ On 2026-09-23: `python -m unittest discover -s tests -v` passed 11/11; `python -
 3. Validate a decision-time replay against a recorded Icarus paper session; compare frame hashes, bar completion and settlement timing.
 4. Implement versioned consumer adapters only after owners accept contract mappings; keep them read-only.
 5. Record evidence and tests here, then submit separate reviewed changes to each sibling repo.
+
+
+## 2026-10-25 ownership notice
+
+At the owner's request, Codex added `LICENSE.md` (proprietary, all rights reserved) and a `README.md` licensing link. Reuse requires written permission subject to law, GitHub terms, third-party terms and prior valid grants. Fresh GitHub file reads verified the complete notice and README link after publication. No runtime tests were needed for these documentation-only changes. No scientific or interface rule changed. A notice cannot prevent copying or revoke existing valid permissions; third-party data rights remain separate.
